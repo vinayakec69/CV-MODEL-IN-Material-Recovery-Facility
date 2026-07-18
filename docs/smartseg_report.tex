@@ -1,0 +1,126 @@
+\documentclass[conference,onecolumn]{IEEEtran}
+\IEEEoverridecommandlockouts
+% The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\begin{document}
+
+\title{SmartSeg: An Edge-AI Based Plastic Waste Sorting System\\
+}
+
+\author{\IEEEauthorblockN{1\textsuperscript{st} Your Name}
+\IEEEauthorblockA{\textit{Emphasis Lab} \\
+\textit{Your College/University}\\
+City, Country \\
+email address}
+}
+
+\maketitle
+
+\begin{abstract}
+The global increase in plastic waste necessitates automated and highly accurate sorting mechanisms for efficient recycling. Traditional sorting facilities often rely on manual labor or expensive optical sorters. In this paper, we present SmartSeg, an Edge-AI based plastic waste sorting system designed for high-speed conveyor belt operations. The system utilizes a Jetson Orin Nano for edge inference and an Intel RealSense Depth Camera for spatial awareness and object detection gating. By leveraging a custom-trained YOLOv8 model on a highly curated dataset designed to eliminate domain gaps, SmartSeg achieves high accuracy in classifying six categories of materials (PET, HDPE, PP, LDPE, MISC, and BACKGROUND). Furthermore, a depth-gating algorithm combined with multi-frame majority voting ensures inference stability, allowing the system to process video feeds at 31 FPS on edge hardware.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Edge AI, YOLOv8, Plastic Sorting, Jetson Orin Nano, Computer Vision, Waste Management
+\end{IEEEkeywords}
+
+\section{Introduction}
+Plastic pollution remains one of the most pressing environmental challenges of the 21st century. Effective recycling is heavily reliant on Material Recovery Facilities (MRFs), where the segregation of mixed waste occurs. Currently, the majority of MRFs rely on manual segregation. This traditional approach is not only labor-intensive and inefficient at scale but also exposes workers to severely hazardous conditions, including toxic substances, sharp objects, and unsanitary environments. Furthermore, manual sorting is highly error-prone due to the visual similarities between different polymer types (e.g., PET, HDPE, PP), leading to contaminated recycling streams. 
+
+Recent advancements in computer vision and deep learning, particularly Convolutional Neural Networks (CNNs), have enabled automated material classification. However, deploying such models in real-world industrial environments introduces significant challenges, such as hardware constraints, domain shift between training data and real-world conditions, and latency requirements.
+
+This project introduces \textbf{SmartSeg}, a low-cost, high-performance Edge-AI solution. By combining the computational efficiency of the YOLOv8 image classification architecture with the NVIDIA Jetson Orin Nano, the system performs real-time classification directly on the conveyor belt. 
+
+\section{Hardware Architecture}
+The SmartSeg architecture is designed for low latency and high reliability in a continuous sorting environment.
+
+\subsection{NVIDIA Jetson Orin Nano}
+The core processing unit is the NVIDIA Jetson Orin Nano. It provides accelerated AI inference capabilities, allowing the YOLOv8 model to process high-resolution frames without relying on cloud computing, thereby ensuring minimal latency.
+
+\subsection{Intel RealSense Depth Camera}
+An Intel RealSense camera provides both RGB and Depth streams. While the RGB stream is used for material classification, the depth stream acts as a critical hardware gate. To conserve GPU memory and processing power, the inference pipeline is only triggered when the depth sensor detects an object physically present on the conveyor belt.
+
+
+
+\section{Proposed Methodology}
+
+\subsection{Dataset Curation and Domain Gap Mitigation}
+Initial training iterations revealed severe overfitting and "domain gap" issues; the model memorized the background of the training images rather than the plastic characteristics. To resolve this, a robust dataset of 2,324 images was captured directly on the physical conveyor belt (using a uniform cardboard background). This zero-domain-gap approach significantly improved real-world performance. 
+
+The dataset was balanced across the following classes:
+\begin{itemize}
+    \item PET (Polyethylene Terephthalate)
+    \item HDPE (High-Density Polyethylene)
+    \item PP (Polypropylene)
+    \item LDPE (Low-Density Polyethylene)
+    \item MISC (Complex/Multi-layer plastics)
+    \item BACKGROUND (Empty conveyor belt)
+\end{itemize}
+
+\subsection{Inference Pipeline and Stability}
+Running raw YOLO inference on every frame leads to flickering classifications due to motion blur and lighting anomalies. SmartSeg implements a robust software pipeline:
+\begin{enumerate}
+    \item \textbf{Depth Gating:} The system samples the center of the depth frame. If the depth value is below a threshold (indicating an object on the belt), the RGB frame is passed to the YOLO model.
+    \item \textbf{Confidence Thresholding:} Classifications below a 65\% confidence score are discarded.
+    \item \textbf{Majority Voting:} The system maintains a rolling buffer of the last 5 frames. The final classification decision is based on the majority vote across these frames, entirely eliminating single-frame hallucinations.
+\end{enumerate}
+
+\section{Experimental Results}
+The system was evaluated on a physical conveyor belt prototype. 
+
+\subsection{Inference Speed}
+By removing computationally expensive depth-RGB alignment operations and implementing the depth-gate, the Jetson Orin Nano achieved a consistent processing speed of \textbf{31 Frames Per Second (FPS)}, comfortably exceeding the requirements for a standard sorting belt.
+
+\subsection{Classification Accuracy}
+The custom-trained YOLOv8 model demonstrated high accuracy across all primary classes, successfully differentiating between visually similar materials such as clear PET bottles and opaque HDPE containers.
+
+% ---------------------------------------------------
+% SCREENSHOTS AND RESULTS
+% Upload these exact files into your Overleaf project 
+% along with this .tex file to compile correctly.
+% ---------------------------------------------------
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=0.7\textwidth]{results.png}}
+\caption{YOLOv8-cls Training Metrics showing training and validation loss reduction over epochs.}
+\label{fig:training}
+\end{figure}
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=0.6\textwidth]{confusion_matrix_normalized.png}}
+\caption{Normalized Confusion Matrix validating high classification accuracy across all material classes.}
+\label{fig:confusion}
+\end{figure}
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=0.7\textwidth]{screenshot1.png}}
+\caption{Hardware setup and implementation of the SmartSeg edge AI system.}
+\label{fig:setup}
+\end{figure}
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=0.7\textwidth]{screenshot2.png}}
+\caption{Real-time classification output during live inference on the conveyor belt.}
+\label{fig:inference}
+\end{figure}
+
+\section{Conclusion and Future Scope}
+The SmartSeg system successfully demonstrates that high-accuracy, real-time plastic sorting is achievable on cost-effective Edge-AI hardware. By prioritizing dataset quality and inference stability over raw model size, the system achieves 31 FPS with high reliability.
+
+Future iterations of SmartSeg aim to implement \textit{Active Learning}. By saving low-confidence images (e.g., $<70\%$ confidence) directly to local storage during operation, the system can semi-autonomously gather hard edge-cases for future retraining, continually reinforcing its own accuracy over time.
+
+\begin{thebibliography}{00}
+\bibitem{b1} Redmon, J., Divvala, S., Girshick, R., \& Farhadi, A. (2016). "You only look once: Unified, real-time object detection." In Proceedings of the IEEE conference on computer vision and pattern recognition (pp. 779-788).
+\bibitem{b2} Jocher, G., Chaurasia, A., \& Qiu, J. (2023). "YOLO by Ultralytics." URL: https://github.com/ultralytics/ultralytics
+\bibitem{b3} NVIDIA Corporation. "Jetson Orin Nano Developer Kit Documentation." 
+\end{thebibliography}
+
+\end{document}
