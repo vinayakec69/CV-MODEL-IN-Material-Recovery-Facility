@@ -15,6 +15,57 @@ This project was developed at the **Emphasis Lab**.
 - **Multi-Frame Majority Voting:** Uses a rolling buffer supermajority rule (7 out of 10 frames) to completely eliminate single-frame hallucinations caused by motion blur or lighting anomalies.
 - **Hardware Optimized:** Bypasses computationally expensive RGB-Depth alignment and runs on a stripped-down headless OS mode (`multi-user.target`) to maximize the Jetson Orin Nano's unified memory.
 
+## 🧠 System Architecture
+
+```mermaid
+graph TD
+    A[Intel RealSense Depth Camera] -->|RGB + Depth Streams| B(NVIDIA Jetson Orin Nano)
+    B -->|Hardware Optimized| C{Depth Gating Filter}
+    C -->|> 0.7m Distance| D[Belt Empty / Idle]
+    D -.->|Wait| B
+    C -->|< 0.7m Distance| E[Object Detected]
+    E --> F[YOLOv8 Classification Inference]
+    F -->|Confidence < 75%| G[Low Confidence Loop]
+    G -.->|Wait| B
+    F -->|Confidence > 75%| H[Append to History Buffer]
+    H --> I{Supermajority Check 7/10}
+    I -->|Failed| J[Stabilizing...]
+    J -.->|Wait| B
+    I -->|Passed| K[Final Classification Output]
+    K --> L((Future: Actuation System))
+```
+
+## 🔄 Inference Data Flow / Use Case
+
+```mermaid
+graph LR
+    subgraph Physical Hardware
+        A[RealSense Camera]
+        B[Conveyor Belt]
+    end
+    
+    subgraph Jetson Orin Nano Edge Processing
+        C(Read Frames)
+        D{Depth < 0.7m?}
+        E(YOLOv8 AI)
+        F{Buffer Vote >= 7}
+    end
+    
+    subgraph Operator Output
+        G[Display Class]
+        H[Trigger Sorting Bin]
+    end
+    
+    B -->|Transports Plastics| A
+    A -->|Raw Video| C
+    C --> D
+    D -->|Yes| E
+    D -->|No| C
+    E --> F
+    F -->|Yes| G
+    G -.->|Future Scope| H
+```
+
 ## 🛠 Hardware Requirements
 * NVIDIA Jetson Orin Nano (8GB)
 * Intel RealSense Depth Camera (e.g., D435i / D415)
